@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>AI Assistant</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem;
+      transition: background 0.5s, color 0.5s;
+    }
+    .clickable {
+      cursor: pointer;
+      transition: background 0.3s, transform 0.2s;
+    }
+    .clickable:hover {
+      background: #ffffff22;
+      transform: scale(1.02);
+    }
+    .dark {
+      background: linear-gradient(135deg, #1e1e1e, #3a3a3a);
+      color: #e0e0e0;
+    }
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+    }
+    button {
+      background: #ffffff22;
+      border: 1px solid #fff;
+      border-radius: 8px;
+      padding: 0.5rem 1rem;
+      color: #fff;
+      cursor: pointer;
+      margin-top: 1rem;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background: #ffffff44;
+    }
+    textarea {
+      width: 100%;
+      max-width: 600px;
+      height: 120px;
+      border: none;
+      border-radius: 8px;
+      padding: 1rem;
+      font-size: 1rem;
+      margin-top: 1rem;
+      resize: vertical;
+      background: #ffffff11;
+      color: #fff;
+    }
+    textarea::placeholder {
+      color: orange;
+      opacity: 1;
+    }
+    input[type="file"] {
+      margin-top: 1rem;
+    }
+    .response {
+      white-space: pre-wrap;
+      margin-top: 1.5rem;
+      background: #ffffff11;
+      border: 1px solid #fff;
+      border-radius: 8px;
+      padding: 1rem;
+      max-width: 600px;
+      width: 100%;
+      font-size: 1.1rem;
+      font-family: 'Georgia', serif;
+    }
+    .history {
+      max-width: 600px;
+      width: 100%;
+      margin-top: 2rem;
+      background: #ffffff11;
+      border: 1px solid #fff;
+      border-radius: 8px;
+      padding: 1rem;
+      overflow-y: auto;
+      max-height: 300px;
+      font-family: 'Georgia', serif;
+    }
+    .message {
+      margin-bottom: 1rem;
+    }
+    .message.user {
+      color: #ffcc70;
+    }
+    .message.ai {
+      color: #a0e7e5;
+    }
+  </style>
+</head>
+<body>
+  <h1>AI Assistant</h1>
+  <button onclick="toggleTheme()">Переключить тему</button>
+  <textarea id="input" placeholder="Введите вопрос..."></textarea><br>
+  <button onclick="send()">Отправить</button>
+  <div class="response clickable" id="extracted"></div>
+
+  <div class="response" id="output"></div>
+
+  <div id="history" class="history"></div>
+
+  <input type="file" id="file" />
+  <button onclick="upload()">Загрузить изображение</button>
+
+  <script>
+    function toggleTheme() {
+      document.body.classList.toggle('dark');
+    }
+
+    function addToHistory(sender, text) {
+      const historyDiv = document.getElementById('history');
+      const msg = document.createElement('div');
+      msg.classList.add('message', sender);
+      msg.innerText = (sender === 'user' ? '🧑 Ты: ' : '🤖 AI: ') + text;
+      historyDiv.appendChild(msg);
+      historyDiv.scrollTop = historyDiv.scrollHeight;
+    }
+
+    async function send() {
+      const inputField = document.getElementById('input');
+      const message = inputField.value;
+
+      addToHistory('user', message);
+
+      const res = await fetch('/api/assistant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message })
+      });
+
+      const data = await res.json();
+      document.getElementById('output').innerText = data.reply;
+      addToHistory('ai', data.reply);
+
+      inputField.value = '';
+    }
+
+    async function upload() {
+      const file = document.getElementById('file').files[0];
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await res.json();
+
+      const extractedText = "📄 Распознанный текст:\n\n" + data.extractedText;
+      document.getElementById('extracted').innerText = extractedText;
+      document.getElementById('output').innerText = data.reply;
+
+      addToHistory('user', extractedText);
+      addToHistory('ai', data.reply);
+    }
+
+    document.getElementById('extracted').addEventListener('click', () => {
+      document.getElementById('extracted').innerText = '';
+    });
+  </script>
+</body>
+</html>
